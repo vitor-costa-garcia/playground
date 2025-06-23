@@ -1,9 +1,10 @@
-# Example file showing a basic pygame "game loop"
 import pygame
 import numpy as np
 from math import sin, cos, sqrt, pi
+from scipy.spatial import KDTree
 
-# pygame setup
+#Brincando com transformações lineares
+
 pygame.init()
 screen = pygame.display.set_mode((1280, 720))
 clock = pygame.time.Clock()
@@ -27,49 +28,59 @@ def sphere_func(radius_squared, step):
     for i in np.arange(-radius_squared, radius_squared, step):
         for j in np.arange(-radius_squared, radius_squared, step):
             try:
-                points.append([i, j, sqrt(radius_squared - i**2 - j**2)])
+                if [i, j, sqrt(radius_squared - i**2 - j**2)] not in points:
+                    points.append([i, j, sqrt(radius_squared - i**2 - j**2)])
             except:
                 continue
 
     for i in np.arange(-radius_squared, radius_squared, step):
         for j in np.arange(-radius_squared, radius_squared, step):
             try:
-                points.append([i, j, -sqrt(radius_squared - i**2 - j**2)])
+                if [i, j, -sqrt(radius_squared - i**2 - j**2)] not in points:
+                    points.append([i, j, -sqrt(radius_squared - i**2 - j**2)])
             except:
                 continue
 
     for i in np.arange(-radius_squared, radius_squared, step):
         for j in np.arange(-radius_squared, radius_squared, step):
             try:
-                points.append([i, sqrt(radius_squared - i**2 - j**2), j])
+                if [i, sqrt(radius_squared - i**2 - j**2), j] not in points:
+                    points.append([i, sqrt(radius_squared - i**2 - j**2), j])
             except:
                 continue
 
     for i in np.arange(-radius_squared, radius_squared, step):
         for j in np.arange(-radius_squared, radius_squared, step):
             try:
-                points.append([i, -sqrt(radius_squared - i**2 - j**2), j])
+                if [i, -sqrt(radius_squared - i**2 - j**2), j] not in points:
+                    points.append([i, -sqrt(radius_squared - i**2 - j**2), j])
             except:
                 continue
 
     for i in np.arange(-radius_squared, radius_squared, step):
         for j in np.arange(-radius_squared, radius_squared, step):
             try:
-                points.append([sqrt(radius_squared - i**2 - j**2), j, i])
+                if [sqrt(radius_squared - i**2 - j**2), j, i] not in points:
+                    points.append([sqrt(radius_squared - i**2 - j**2), j, i])
             except:
                 continue
 
     for i in np.arange(-radius_squared, radius_squared, step):
         for j in np.arange(-radius_squared, radius_squared, step):
             try:
-                points.append([-sqrt(radius_squared - i**2 - j**2), j, i])
+                if [-sqrt(radius_squared - i**2 - j**2), j, i] not in points:
+                    points.append([-sqrt(radius_squared - i**2 - j**2), j, i])
             except:
                 continue
 
-    return points
+    tree = KDTree(points)
+    lines = [tree.query(point, 7)[1][1:] for point in points]
+
+    return points, lines
 
 
-sphere_points = sphere_func(9, 1)
+sphere_points, indices = sphere_func(9, 1)
+print(indices)
 
 geometry = 'sphere'
 
@@ -87,8 +98,6 @@ while running:
                         [0,              0,           1]])
     
     final_rotation_m = rot_mX*rot_mY*rot_mZ
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -119,7 +128,6 @@ while running:
     if keys[pygame.K_s]: #0.14
         scaling_factor -= 0.1
             
-    # fill the screen with a color to wipe away anything from last frame
     screen.fill("#111630")
 
     # RENDER YOUR GAME HERE
@@ -138,10 +146,18 @@ while running:
 
     if geometry == 'sphere':
         sphere_points_2d = []
-        for coord in sphere_points:
-            posx, posy = scaling_factor*(proj_matrix * (final_rotation_m * np.matrix(coord).transpose())) + offset_matrix
+        drawn_lines = []
+        for i in range(len(sphere_points)):
+            posx, posy = scaling_factor*(proj_matrix * (final_rotation_m * np.matrix(sphere_points[i]).transpose())) + offset_matrix
             pygame.draw.circle(screen, "white", (posx.item(), posy.item()), 5)
             sphere_points_2d.append((posx.item(), posy.item()))
+
+        for i in range(len(sphere_points)):
+            for close_point in indices[i]:
+                line_selected = [min(i, close_point), max(i, close_point)]
+                if line_selected not in drawn_lines:
+                    drawn_lines.append(line_selected)
+                    pygame.draw.line(screen, 'white', sphere_points_2d[i], sphere_points_2d[close_point])
 
 
     # flip() the display to put your work on screen
