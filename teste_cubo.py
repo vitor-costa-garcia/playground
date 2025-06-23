@@ -23,64 +23,44 @@ theta_x = 0
 theta_y = 0
 theta_z = 0
 
-def sphere_func(radius_squared, step):
-    points = []
-    for i in np.arange(-radius_squared, radius_squared, step):
-        for j in np.arange(-radius_squared, radius_squared, step):
-            try:
-                if [i, j, sqrt(radius_squared - i**2 - j**2)] not in points:
-                    points.append([i, j, sqrt(radius_squared - i**2 - j**2)])
-            except:
-                continue
+def sphere_func(radius_squared, n):
+    original_points = [
+        (
+            0 + sqrt(radius_squared) * cos(2 * pi * i / n),
+            0 + sqrt(radius_squared) * sin(2 * pi * i / n),
+            0
+        )
+        for i in range(n)
+    ]
 
-    for i in np.arange(-radius_squared, radius_squared, step):
-        for j in np.arange(-radius_squared, radius_squared, step):
-            try:
-                if [i, j, -sqrt(radius_squared - i**2 - j**2)] not in points:
-                    points.append([i, j, -sqrt(radius_squared - i**2 - j**2)])
-            except:
-                continue
+    points = original_points.copy()
 
-    for i in np.arange(-radius_squared, radius_squared, step):
-        for j in np.arange(-radius_squared, radius_squared, step):
-            try:
-                if [i, sqrt(radius_squared - i**2 - j**2), j] not in points:
-                    points.append([i, sqrt(radius_squared - i**2 - j**2), j])
-            except:
-                continue
-
-    for i in np.arange(-radius_squared, radius_squared, step):
-        for j in np.arange(-radius_squared, radius_squared, step):
-            try:
-                if [i, -sqrt(radius_squared - i**2 - j**2), j] not in points:
-                    points.append([i, -sqrt(radius_squared - i**2 - j**2), j])
-            except:
-                continue
-
-    for i in np.arange(-radius_squared, radius_squared, step):
-        for j in np.arange(-radius_squared, radius_squared, step):
-            try:
-                if [sqrt(radius_squared - i**2 - j**2), j, i] not in points:
-                    points.append([sqrt(radius_squared - i**2 - j**2), j, i])
-            except:
-                continue
-
-    for i in np.arange(-radius_squared, radius_squared, step):
-        for j in np.arange(-radius_squared, radius_squared, step):
-            try:
-                if [-sqrt(radius_squared - i**2 - j**2), j, i] not in points:
-                    points.append([-sqrt(radius_squared - i**2 - j**2), j, i])
-            except:
-                continue
+    theta_x = pi/8
+    for _ in range(8):
+        theta_x += pi/8
+        rot_mX = np.matrix([[1,            0,             0],
+                            [0, cos(theta_x), -sin(theta_x)],
+                            [0, sin(theta_x), cos(theta_x)]])
+        for point in original_points:
+            r = np.matmul(rot_mX, np.matrix(point).transpose())
+            new_point = (float(r[0]), float(r[1]), float(r[2]))
+            if new_point not in points:
+                points.append(new_point)
 
     tree = KDTree(points)
-    lines = [tree.query(point, 7)[1][1:] for point in points]
+    lines = [tree.query(point, 9)[1][1:] for point in points]
 
-    return points, lines
+    drawn_lines = []
+    for i in range(len(points)):
+        for close_point in lines[i]:
+            line_selected = [min(i, close_point), max(i, close_point)]
+            if line_selected not in drawn_lines:
+                drawn_lines.append(line_selected)
+
+    return points, drawn_lines
 
 
-sphere_points, indices = sphere_func(9, 1)
-print(indices)
+sphere_points, indices = sphere_func(9, 18)
 
 geometry = 'sphere'
 
@@ -149,15 +129,11 @@ while running:
         drawn_lines = []
         for i in range(len(sphere_points)):
             posx, posy = scaling_factor*(proj_matrix * (final_rotation_m * np.matrix(sphere_points[i]).transpose())) + offset_matrix
-            pygame.draw.circle(screen, "white", (posx.item(), posy.item()), 5)
+            pygame.draw.circle(screen, "white", (posx.item(), posy.item()), 1)
             sphere_points_2d.append((posx.item(), posy.item()))
 
-        for i in range(len(sphere_points)):
-            for close_point in indices[i]:
-                line_selected = [min(i, close_point), max(i, close_point)]
-                if line_selected not in drawn_lines:
-                    drawn_lines.append(line_selected)
-                    pygame.draw.line(screen, 'white', sphere_points_2d[i], sphere_points_2d[close_point])
+        for line in indices:
+            pygame.draw.line(screen, 'white', sphere_points_2d[line[0]], sphere_points_2d[line[1]])
 
 
     # flip() the display to put your work on screen
