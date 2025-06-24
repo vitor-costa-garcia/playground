@@ -35,7 +35,7 @@ def sphere_func(radius_squared, n):
 
     points = original_points.copy()
 
-    theta_x = pi/8
+    theta_x = 0
     for _ in range(8):
         theta_x += pi/8
         rot_mX = np.matrix([[1,            0,             0],
@@ -48,7 +48,7 @@ def sphere_func(radius_squared, n):
                 points.append(new_point)
 
     tree = KDTree(points)
-    lines = [tree.query(point, 9)[1][1:] for point in points]
+    lines = [tree.query(point, 5)[1][1:] for point in points]
 
     drawn_lines = []
     for i in range(len(points)):
@@ -62,7 +62,7 @@ def sphere_func(radius_squared, n):
 
 sphere_points, indices = sphere_func(9, 18)
 
-geometry = 'sphere'
+geometry = 'cube'
 
 while running:
     rot_mX = np.matrix([[1,            0,             0],
