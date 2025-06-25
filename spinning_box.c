@@ -23,7 +23,7 @@ int main(){
     float y = 0; //3d coordinates
     float z = 0;
 
-    int cube_w = 35; int cube_h = 7; int cube_l = 40;
+    int cube_w = 25; int cube_h = 25; int cube_l = 25;
     float k1 = 28;
 
     CHAR_INFO output[screen_w * screen_h]; //OUTPUT BUFFER

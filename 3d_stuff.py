@@ -62,7 +62,7 @@ def sphere_func(radius_squared, n):
 
 sphere_points, indices = sphere_func(9, 18)
 
-geometry = 'cube'
+geometry = 'sphere'
 
 while running:
     rot_mX = np.matrix([[1,            0,             0],
