@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <unistd.h>
@@ -8,6 +7,11 @@ void calculatePointR(float x, float y, float z, char a);
 
 int main(){
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    int screen_w = 50; int screen_h = 50;
+    COORD bufferSize = {screen_w, screen_h};
+    COORD bufferCoord = {0, 0};
+    SMALL_RECT writeRegion = {0, 0, screen_w - 1, screen_h - 1};
 
     float A = 0; float B = 0; float C = 0;
     float distanceScreen = 55;
@@ -19,27 +23,18 @@ int main(){
     float y = 0; //3d coordinates
     float z = 0;
 
-    int cube_w = 30; int cube_h = 30; int cube_l = 30;
+    int cube_w = 35; int cube_h = 7; int cube_l = 40;
     float k1 = 28;
 
-    int screen_w = 50; int screen_h = 50;
-
-    char* output[screen_h];
-    for(int i = 0; i < screen_h; i++){
-        output[i] = malloc(sizeof(char)*(screen_w + 2));
-        for(int j = 0; j < screen_w; j++){
-            output[i][j] = ' ';
-        }
-        output[i][screen_w] = '\n';
-        output[i][screen_w + 1] = '\0';
+    CHAR_INFO output[screen_w * screen_h]; //OUTPUT BUFFER
+    for(int i = 0; i < screen_w * screen_h; i++){
+        output[i].Char.AsciiChar = ' ';
+        output[i].Attributes = FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN;
     }
 
-    float* zbuffer[screen_h];
+    float zbuffer[screen_w * screen_h];
     for(int i = 0; i < screen_h; i++){
-        zbuffer[i] = malloc(sizeof(float)*screen_w);
-        for(int j = 0; j < screen_w; j++){
-            zbuffer[i][j] = 1000;
-        };
+        zbuffer[i] = 1000;
     };
 
     void calculatePointR(float x, float y, float z, char a){
@@ -51,9 +46,23 @@ int main(){
         y_p = (int)(screen_h/2 + (k1*r_y)/(r_z + 5));
 
         if (x_p >= 0 && x_p < screen_w && y_p >= 0 && y_p < screen_h) {
-            if (r_z < zbuffer[y_p][x_p]) {
-                zbuffer[y_p][x_p] = r_z;
-                output[y_p][x_p] = a;
+            if (r_z < zbuffer[y_p * screen_w + x_p]) {
+                zbuffer[y_p * screen_w + x_p] = r_z;
+                output[y_p * screen_w + x_p].Char.AsciiChar = a;
+                switch (a){
+                    case '#':
+                        output[y_p * screen_w + x_p].Attributes = FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
+                    case '*':
+                        output[y_p * screen_w + x_p].Attributes = FOREGROUND_RED; break;
+                    case '&':
+                        output[y_p * screen_w + x_p].Attributes = FOREGROUND_GREEN; break;
+                    case '%':
+                        output[y_p * screen_w + x_p].Attributes = FOREGROUND_BLUE | FOREGROUND_GREEN; break;
+                    case 'o':
+                        output[y_p * screen_w + x_p].Attributes = FOREGROUND_RED | FOREGROUND_BLUE; break;
+                    case '$':
+                        output[y_p * screen_w + x_p].Attributes = FOREGROUND_GREEN | FOREGROUND_RED; break;
+                }
             }
         }
     }
@@ -73,8 +82,8 @@ int main(){
             }
         }
 
-        for(float i = -cube_w/2; i < cube_w/2; i += 0.26){
-            for(float j = -cube_l/2; j < cube_l/2; j += 0.26){
+        for(float i = -cube_l/2; i < cube_l/2; i += 0.26){
+            for(float j = -cube_w/2; j < cube_w/2; j += 0.26){
                 calculatePointR(i, j, cube_h/2, '&');
                 calculatePointR(i, j, -cube_h/2, '$');
             }
@@ -82,45 +91,15 @@ int main(){
 
         A += 0.11;
         B += 0.07;
-        C += 0.03;
+        C += 0.04;
 
+        WriteConsoleOutput(hConsole, output, bufferSize, bufferCoord, &writeRegion);
+        usleep(7000);
 
-        //COLORED FACES - SLOWER
-        // for(int i = 0; i < screen_w; i++){
-        //     for(int j = 0; j < screen_w+2; j++){
-        //         char ch = output[i][j];
-        //         if(ch == '#'){
-        //             SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE);
-        //         }   
-        //         else if((ch == '*')){
-        //             SetConsoleTextAttribute(hConsole, FOREGROUND_RED);
-        //         }
-        //         else if((ch == '&')){
-        //             SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN);
-        //         }
-        //         else if((ch == '%')){
-        //             SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_GREEN);
-        //         }
-        //         else if((ch == 'o')){
-        //             SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_BLUE);
-        //         }
-        //         else if((ch == '$')){
-        //             SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_RED);
-        //         }
-        //         printf("%c", ch);
-        //     }
-        // }
-
-        //UNCOLORED FACES - Faster
-        for(int i = 0; i < screen_w; i++){
-            printf("%s", output[i]);
-        }
-
-        for (int i = 0; i < screen_h; i++) {
-            for (int j = 0; j < screen_w; j++) {
-                output[i][j] = ' ';
-                zbuffer[i][j] = 1000;
-            }
+        for (int i = 0; i < screen_w * screen_h; i++) {
+            output[i].Char.AsciiChar = ' ';
+            output[i].Attributes = FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_GREEN;
+            zbuffer[i] = 1000;
         }
     };
 };
