@@ -154,12 +154,12 @@ int* generateValidPuzzle(){
 // policy 0-egreedy 1-greedy
 int getAction(double* qRow, int policy){
 	switch(policy){
-		case 0:
+		case 0: {
 			if(rand()%100 < EPS*100){
 				return rand()%4;
 			}
-
-		case 1:
+        }
+		case 1: {
 			int bestAction = -1;
 			double bestQ = -99999;
 
@@ -171,13 +171,18 @@ int getAction(double* qRow, int policy){
 			}
 
 			return bestAction;
+		}
 	}
 }
 
-int move(qTable* qT, int* titles, int policy){
+float* move(qTable* qT, int* titles, int policy){
 	int actions[4] = {3, 1, -3, -1};
 	int action = getAction(searchHash(titles, qT), policy);
 	int zeroPos;
+
+	float* actionReward = malloc(sizeof(float)*2);
+	actionReward[0] = action;
+	actionReward[1] = -1;
 
 	for(int i = 0; i < 9; i++){
 		if(titles[i] == 0){
@@ -192,10 +197,11 @@ int move(qTable* qT, int* titles, int policy){
 			!((zeroPos == 3 || zeroPos == 6) && action == 3) ){
 			titles[zeroPos] = titles[swapNum];
 			titles[swapNum] = 0;
+			return actionReward;
 		}
 	}
-
-	return action;
+	actionReward[1] = -1000;
+	return actionReward;
 }
 
 bool checkComplete(int* titles){
@@ -219,7 +225,11 @@ void updateQValues(qTable* qT, int* oldTitles, int* titles, int a, float r, floa
 	int greddyActionNext = getAction(qValuesNext, 1);// 1-greedy
 
 	//a is the old action
-	qValuesOld[a] += lr*(r + DF*qValuesNext[greddyActionNext] - qValuesOld[a]);
+	if(!checkComplete(titles)){
+		qValuesOld[a] += lr*(r + DF*qValuesNext[greddyActionNext] - qValuesOld[a]);
+	} else {
+		qValuesOld[a] += lr*(r - qValuesOld[a]);
+	}
 }
 
 void showTitles(int* titles){
@@ -234,19 +244,20 @@ void showTitles(int* titles){
 void qLearningPuzzle(qTable* qT, int nEpisodes, int policy, bool showInfo){
 	float lr = 0.05;
 	int* oldTitles = malloc(sizeof(int)*9);
-	int action;
+	float* actionR;
 	for(int episode = 0; episode < nEpisodes; episode++){
 		int* titles = generateValidPuzzle();
 		if(showInfo){printf("Start:\n"); showTitles(titles); printf("Sequence of actions:\n");};
 		while(!checkComplete(titles)){
 			copyTitles(oldTitles, titles);
-			action = move(qT, titles, policy); //r = -1 for every move
-			if(showInfo){printf("%d\n", action); showTitles(titles);};
-			updateQValues(qT, oldTitles, titles, action, -1, lr);
+			actionR = move(qT, titles, policy); //r = -1 for every move
+			if(showInfo){printf("%d\n", actionR[0]); showTitles(titles);};
+			updateQValues(qT, oldTitles, titles, actionR[0], actionR[1], lr);
+			free(actionR);
 		}
 		if((episode)%5000 == 0){printf("Completed! %d/%d\n", episode+1, nEpisodes);};
 
-		if((episode+1)%100000 == 0){
+		if((episode+1)%1000000 == 0){
 			printf("Current learning rate %f ->", lr);
 			lr /= 2;
 			printf("%f\n", lr);
@@ -262,7 +273,7 @@ int main(){
 	srand(time(NULL));
 
 	qTable* qT = allocQTable();
-	qLearningPuzzle(qT, 800000, 0, false);
+	qLearningPuzzle(qT, 10000000, 0, false);
 
 	qLearningPuzzle(qT, 1, 1, true);
 	deleteQTable(qT);
